@@ -6,81 +6,54 @@
 //
 
 import SwiftUI
-import CoreData
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
+    @StateObject var viewModel = HeroViewModel()
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+        VStack {
+            if let hero = viewModel.hero {
+                Text(hero.name)
+                    .font(.largeTitle)
+                    .bold()
+                    .padding()
+
+                if let imageUrl = hero.images["md"], let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFit()
+                    } placeholder: {
+                        ProgressView()
                     }
+                    .frame(height: 300)
                 }
-                .onDelete(perform: deleteItems)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Full Name: \(hero.biography.fullName)")
+                    Text("Place of Birth: \(hero.biography.placeOfBirth)")
+                    Text("First Appearance: \(hero.biography.firstAppearance)")
+                    Text("Intelligence: \(hero.powerstats.intelligence)")
+                    Text("Strength: \(hero.powerstats.strength)")
+                    Text("Speed: \(hero.powerstats.speed)")
+                    Text("Durability: \(hero.powerstats.durability)")
+                    Text("Power: \(hero.powerstats.power)")
+                    Text("Combat: \(hero.powerstats.combat)")
+                }
+                .padding()
+            } else {
+                Text("Press the button to get a hero!")
+                    .padding()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+
+            Button("Random Hero") {
+                viewModel.fetchHero()
             }
-            Text("Select an item")
+            .padding()
+            .background(Color.purple)
+            .foregroundColor(.white)
+            .cornerRadius(10)
+        }
+        .onAppear {
+            viewModel.fetchHero()
         }
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-}
-
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
-
-#Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
